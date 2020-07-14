@@ -11,8 +11,8 @@ DATA_SIZE = 5
 RING_SIZE = 3
 
 # ring buf parameter address mapping, must be in [0, PARAM_SIZE)
-ADDR_T0 = 2 % PARAM_SIZE
-ADDR_WRITE_PTR = 3 % PARAM_SIZE
+ADDR_T0 = 0 % PARAM_SIZE
+ADDR_WRITE_PTR = 1 % PARAM_SIZE
 
 # ...
 STEP = DATA_SIZE + PARAM_SIZE
@@ -64,9 +64,9 @@ def append_to_fram(data):
     if inner_i == 0:
         # fill param space with empty data, just for show
         for n in range(0, PARAM_SIZE):
-            FRAM[Pi + n] = 'p'
+            FRAM[Pi + n] = 'spare'
         # store T0
-        FRAM[Pi + ADDR_T0] = str(datetime.now())
+        FRAM[Pi + ADDR_T0] = f'T0={str(datetime.now())}'
 
     # store current write index
     FRAM[Pi + ADDR_WRITE_PTR] = f'w={Ai}+{inner_i}'
