@@ -1,21 +1,29 @@
+"""Test code for LoRa data saving/sending consumer/producer algorithm.
+"""
+
 from datetime import datetime, timedelta
 from pprint import pprint
 from random import randint
 import time
 import os
 
+
 # init
-SIZE = 10
+RING_SIZE = 10
 FRAM = {}
-for x in range(SIZE):
-    FRAM[x % SIZE] = 0
 write_ptr = 1
 send_ptr = 0
+
+# fill with zeros, just for show
+for x in range(RING_SIZE):
+    FRAM[x % RING_SIZE] = 0
+
+# semmi
 elapsed = 0
 
 # --- input ---
 # T0 = datetime.now()
-T0 = datetime(2020, 2, 28, 23, 59)
+# T0 = datetime(2020, 2, 28, 23, 59)
 
 # probabilites (0-100)
 imp_prob = 100  # ez mindig 100
@@ -40,10 +48,10 @@ while True:
         print()
         print('- ' * 12)
 
-        # --- other
+        # --- ... ---
         # if send_ptr == write_ptr:
         # !!!
-        if (write_ptr + 1) % SIZE == send_ptr:
+        if (write_ptr + 1) % RING_SIZE == send_ptr:
             send_prob = 50  # debug
             print('Buffer is full!')
             # continue
@@ -51,24 +59,24 @@ while True:
         # --- random incoming impulse ---
         if randint(0, 100) < imp_prob:
             # !!!
-            if (write_ptr + 1) % SIZE != send_ptr:
+            if (write_ptr + 1) % RING_SIZE != send_ptr:
                 # print(f'Incoming imp #{write_ptr}')
-                FRAM[write_ptr % SIZE] = randint(0, 60)
+                FRAM[write_ptr % RING_SIZE] = randint(100000, 999999)
                 write_ptr += 1
-                write_ptr %= SIZE
+                write_ptr %= RING_SIZE
 
         # --- random outgoing packet ---
         if (randint(0, 100) < send_prob):
             # !!!
-            if (send_ptr + 1) % SIZE != write_ptr:
+            if (send_ptr + 1) % RING_SIZE != write_ptr:
                 print(f'Sending RAM[{send_ptr}]={FRAM[send_ptr]}')
 
                 # mark sent item
-                # FRAM[send_ptr % SIZE] = '(' + str(FRAM[send_ptr % SIZE]) + ')'
-                FRAM[send_ptr % SIZE] = '-'
+                # FRAM[send_ptr % RING_SIZE] = '(' + str(FRAM[send_ptr % RING_SIZE]) + ')'
+                FRAM[send_ptr % RING_SIZE] = '-'
 
                 send_ptr += 1
-                send_ptr %= SIZE
+                send_ptr %= RING_SIZE
             else:
                 print('Sending nothing')
 
