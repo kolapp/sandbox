@@ -9,7 +9,7 @@ import os
 
 
 # init
-RING_SIZE = 10
+RING_SIZE = 8
 FRAM = {}
 write_ptr = 1
 send_ptr = 0
@@ -41,12 +41,12 @@ while True:
             row = f'RAM{[k]} = {v}'
             print(
                 # show write ptr
-                '>' if k == write_ptr else '',
+                'write->\t' if k == write_ptr else '\t',
                 # show item and send ptr
                 row + ' <- send' if k == send_ptr else row
             )
         print()
-        print('- ' * 12)
+        print('- ' * 18)
 
         # --- ... ---
         # if send_ptr == write_ptr:
@@ -61,10 +61,12 @@ while True:
             # !!!
             if (write_ptr + 1) % RING_SIZE != send_ptr:
                 # print(f'Incoming imp #{write_ptr}')
-                FRAM[write_ptr % RING_SIZE] = randint(100000, 999999)
+                FRAM[write_ptr % RING_SIZE] = '{:X}'.format(
+                    randint(4096, 65535))
                 write_ptr += 1
                 write_ptr %= RING_SIZE
 
+        # BUG: hulyeseget csinal, indulaskor kikuldi a 0-t is!!!
         # --- random outgoing packet ---
         if (randint(0, 100) < send_prob):
             # !!!
@@ -73,7 +75,8 @@ while True:
 
                 # mark sent item
                 # FRAM[send_ptr % RING_SIZE] = '(' + str(FRAM[send_ptr % RING_SIZE]) + ')'
-                FRAM[send_ptr % RING_SIZE] = '-'
+                p = send_ptr % RING_SIZE
+                FRAM[p] = f'{FRAM[p]}(sent)'
 
                 send_ptr += 1
                 send_ptr %= RING_SIZE
