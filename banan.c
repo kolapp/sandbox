@@ -14,5 +14,6 @@ uint8_t bcd2bin(uint8_t value)
 void main()
 {
     uint8_t x = 0x20;
+    // helo
     printf("%d --> %d", x, bcd2bin(x));
 }
