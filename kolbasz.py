@@ -83,10 +83,9 @@ for s in payload:
     print(s)
 
     for p in parse(s):
-    print(
+        print(
             p[0], p[1]
-
-    )
+        )
 
     print()
 
