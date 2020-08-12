@@ -83,11 +83,11 @@ def parse_payload(s):
 
 # test
 for s in payload:
-    parsed = parse(s)
+    parsed = parse_payload(s)
 
     print(s)
 
-    for p in parse(s):
+    for p in parse_payload(s):
         print(
             p[0], p[1]
         )
