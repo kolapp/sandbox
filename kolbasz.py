@@ -48,52 +48,48 @@ def parse(s):
     # TODO: implement zero decompression
     # ...
 
-    parsed = {'T0': 'n/a', 'data': 'n/a', 'sum': 0}
-
     try:
 
-        T0 = [int(tt, 16) for tt in split_every_n(s[0:2 * 6], 2)]
-        parsed['T0'] = datetime(
-            year=T0[0] + 2000,  # rtc counts years from 2000
-            month=T0[1],
-            day=T0[2],
-            hour=(T0[3] - 1) % 24,  # timezone something
-            minute=T0[4],
-            second=T0[5],
+        dd = [int(tt, 16) for tt in split_every_n(s[0:2 * 6], 2)]
+        T0 = datetime(
+            year=dd[0] + 2000,  # rtc counts years from 2000
+            month=dd[1],
+            day=dd[2],
+            hour=(dd[3] - 1) % 24,  # timezone something
+            minute=dd[4],
+            second=dd[5],
         )
 
         # convert every character/nibble from hex to int
         data = [int(d, 16) for d in list(s[2 * 6:])]
-        parsed['data'] = data
 
-        # sum it for fun
-        parsed['sum'] = sum(data)
-
-        return parsed
+        for i, v in enumerate(data):
+            # zero values dont matter
+            if v != 0:
+                yield (
+                    T0 + timedelta(minutes=i),
+                    v
+                )
     except ValueError:
         print('szar: ', s)
-        return parsed
+        raise
+        return
 
 
 # test
 for s in payload:
     parsed = parse(s)
 
-    print()
+    print(s)
 
+    for p in parse(s):
     print(
-        parsed['T0'],
-        parsed['data'],
-        # parsed['sum'],
-        #     # '\n',
-        #     # '- ' * 25,
-        #     # '\n',
+            p[0], p[1]
+
     )
 
-    for i, v in enumerate(parsed['data']):
-        if v != 0:
-            print(
-                parsed['T0'] + timedelta(minutes=i),
-                ':',
-                v,
-            )
+    print()
+
+    # print(
+    #     f'in: {s}'
+    # )
