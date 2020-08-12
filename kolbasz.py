@@ -31,17 +31,22 @@ def split_every_n(string, n):
     return [string[i:i + n] for i in range(0, len(string), n)]
 
 
-def parse(s):
+def parse_payload(s):
     """ Convert nonsense payload
 
     Example:
     in:
-        s = '140809091b0003200000'
+        s = '140809091b0012005600'
+
         T0 = 14 08 09 09 1b 00 (hex)
-        data = 03 20 00 00 (hex nibbles)
+        data = 12 00 56 00 (hex nibbles)
     out:
-        T0 = 2020-08-09 08:27:00
-        data = [0, 3, 2, 0, 0, 0, 0, 0]
+        generator object that loops tuples this:
+        (measurement time, impulse count)
+        (2020-08-09 08:27:00, 1)
+        (2020-08-09 08:28:00, 2)
+        (2020-08-09 08:31:00, 5)
+        (2020-08-09 08:32:00, 6)
 
     """
 
