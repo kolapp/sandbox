@@ -71,10 +71,10 @@ def parse_payload(s):
         for i, v in enumerate(data):
             # zero values dont matter
             if v != 0:
-                yield (
-                    T0 + timedelta(minutes=i),
-                    v
-                )
+                yield {
+                    'measured': T0 + timedelta(minutes=i),
+                    'impulse_count': v,
+                }
     except ValueError:
         print('szar: ', s)
         raise
@@ -89,7 +89,7 @@ for s in payload:
 
     for p in parse_payload(s):
         print(
-            p[0], p[1]
+            p
         )
 
     print()
