@@ -7,10 +7,10 @@
  *
  * Max soups mean that only a limited amount of metering systems should be able to send data.
  *
- * Random chance is used to indicate whether a metering system has data to send, is available
- * or connected at all.
+ * Random chance is used to indicate the uncertainty whether a metering system has data to send,
+ * is available or connected at all.
  *
- * A day means a certain time interval the mote has to send out the most possible data.
+ * A serving means an XY minute long timespan and can result in 1 served soup.
  *
  */
 
@@ -19,11 +19,19 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define MAX_SOUPS_SERVED 2
+#define MAX_SOUPS_SERVED 5
 // number of cases
-#define NUMBER_OF_GUESTS 4
+#define NUMBER_OF_GUESTS 3
 // [0, 100]
-#define SOUP_CHANCE 40
+#define SOUP_CHANCE 100
+
+// This should have exactly <NUMBER_OF_GUESTS> members.
+typedef enum Guests
+{
+    Zero,
+    One,
+    Two,
+} guests_t;
 
 typedef enum
 {
@@ -31,16 +39,45 @@ typedef enum
     YES,
 } soup_status_t;
 
-soup_status_t get_soup()
+soup_status_t get_soup(guests_t guest)
 {
-    // random chance of getting soup
-    if ((rand() % 100) < SOUP_CHANCE)
+    /*
+    // Zero is sneaky and always gets soup
+    if (guest == Zero)
+    {
+        return YES;
+    }
+    */
+
+    // others have a random chance of getting soup
+    if ((rand() % 100) <= SOUP_CHANCE)
     {
         return YES;
     }
     else
     {
         return NOPE;
+    }
+}
+
+void eat_soup(guests_t guest)
+{
+    switch (guest)
+    {
+    case Zero:
+        printf("Zero is eating.\n");
+        break;
+
+    case One:
+        printf("One is eating.\n");
+        break;
+
+    case Two:
+        printf("Two is eating.\n");
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -51,19 +88,24 @@ void main()
     // does the guest get soup?
     soup_status_t soup_status;
     // who comes next?
-    uint8_t turn = 0;
+    guests_t turn = 0;
     // how many guests GOT served soup?
     uint8_t soups_served = 0;
 
-    // 1 iteration means 1 guest asking for soup
-    for (uint8_t n = 0; n < 16; n++)
+    // guests_t guest = 0;
+
+    for (uint8_t serving = 0; serving < 16; serving++)
     {
+        // simulate XY minutes of wait, just for show
+        system("timeout 1 >> NULL");
+
         // all guests asked for soup
         if (turn >= NUMBER_OF_GUESTS)
         {
             turn = 0;
             soups_served = 0;
-            printf("\n> The next day:\n");
+
+            printf("Asked all %d guests for soup.\n\n", NUMBER_OF_GUESTS);
         }
 
         // ran out of soup!
@@ -72,53 +114,26 @@ void main()
             turn = 0;
             soups_served = 0;
 
-            printf("Served all the soups (that is %d), come back tomorrow.\n", MAX_SOUPS_SERVED);
-            printf("\n> The next day:\n");
+            printf("Served all %d of the soups, come back later.\n\n", MAX_SOUPS_SERVED);
         }
 
-        // guest next in line asks for soup
-        switch (turn)
+        // guest asks for soup
+        while (turn < NUMBER_OF_GUESTS)
         {
-        case 0:
-            soup_status = get_soup();
+            soup_status = get_soup(turn);
+
             if (soup_status == YES)
             {
                 soups_served++;
-                printf("zero is eating.\n");
-            }
-            break;
+                eat_soup(turn);
+                // next one comes in line ...
+                turn++;
 
-        case 1:
-            soup_status = get_soup();
-            if (soup_status == YES)
-            {
-                soups_served++;
-                printf("one is eating.\n");
+                break;
             }
-            break;
+            // ... whether the guest got soup or not
+            turn++;
+        } // while
+    }     // for
 
-        case 2:
-            soup_status = get_soup();
-            if (soup_status == YES)
-            {
-                soups_served++;
-                printf("two is eating.\n");
-            }
-            break;
-
-        case 3:
-            soup_status = get_soup();
-            if (soup_status == YES)
-            {
-                soups_served++;
-                printf("three is eating.\n");
-            }
-            break;
-        default:
-            break;
-        }
-
-        // move to next guest
-        turn++;
-    }
-}
+} // main
