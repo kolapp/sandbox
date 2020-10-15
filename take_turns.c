@@ -23,7 +23,7 @@
 // number of cases
 #define NUMBER_OF_GUESTS 3
 // [0, 100]
-#define SOUP_CHANCE 100
+#define SOUP_CHANCE 60
 
 // This should have exactly <NUMBER_OF_GUESTS> members.
 typedef enum Guests
@@ -41,15 +41,26 @@ typedef enum
 
 soup_status_t get_soup(guests_t guest)
 {
-    /*
-    // Zero is sneaky and always gets soup
+    printf("#%d asks for soup.\n", guest);
+
+    // some guests always gets soup
     if (guest == Zero)
+    {
+        return YES;
+    }
+    /*
+    if (guest == One)
+    {
+        return NOPE;
+    }
+    else
     {
         return YES;
     }
     */
 
-    // others have a random chance of getting soup
+    // /*
+    //random chance of getting soup
     if ((rand() % 100) <= SOUP_CHANCE)
     {
         return YES;
@@ -58,10 +69,13 @@ soup_status_t get_soup(guests_t guest)
     {
         return NOPE;
     }
+    // */
 }
 
 void eat_soup(guests_t guest)
 {
+    printf("#%d is eating.\n");
+    /*
     switch (guest)
     {
     case Zero:
@@ -79,6 +93,7 @@ void eat_soup(guests_t guest)
     default:
         break;
     }
+    */
 }
 
 void main()
@@ -91,13 +106,17 @@ void main()
     guests_t turn = 0;
     // how many guests GOT served soup?
     uint8_t soups_served = 0;
+    // its possible to ask twice for soup, if nobody else got soup (special case)
+    uint8_t repeta;
 
     // guests_t guest = 0;
 
-    for (uint8_t serving = 0; serving < 16; serving++)
+    for (uint8_t serving = 0; serving < 12; serving++)
     {
         // simulate XY minutes of wait, just for show
         system("timeout 1 >> NULL");
+        // show some made-up time for immersion, just for show
+        printf("\n--- time is %02d:%02d ---\n", 11 + (serving * 5) / 60, (serving * 5) % 60);
 
         // all guests asked for soup
         if (turn >= NUMBER_OF_GUESTS)
@@ -105,7 +124,7 @@ void main()
             turn = 0;
             soups_served = 0;
 
-            printf("Asked all %d guests for soup.\n\n", NUMBER_OF_GUESTS);
+            printf("All %d guests asked for soup. Time to eat again.\n", NUMBER_OF_GUESTS);
         }
 
         // ran out of soup!
@@ -118,8 +137,14 @@ void main()
         }
 
         // guest asks for soup
-        while (turn < NUMBER_OF_GUESTS)
+        repeta = 0;
+        while (1)
         {
+            if (repeta > 1)
+            {
+                // go home now y'all
+                break;
+            }
             soup_status = get_soup(turn);
 
             if (soup_status == YES)
@@ -133,6 +158,11 @@ void main()
             }
             // ... whether the guest got soup or not
             turn++;
+            if (turn >= NUMBER_OF_GUESTS)
+            {
+                repeta++;
+            }
+            turn %= NUMBER_OF_GUESTS;
         } // while
     }     // for
 
