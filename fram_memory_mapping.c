@@ -209,6 +209,7 @@ ring_buf_item_t rb_in3 = {
 
 // DUMMY VARIABLE
 uint8_t FRAM[256];
+uint8_t bucket[64];
 
 // DUMMY FUNCTION
 void FRAM_read(uint32_t addr, uint8_t *buf, uint8_t len)
@@ -269,8 +270,10 @@ void getNow(uint8_t *buf)
 
 void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
 {
-    uint32_t Ai;
+    // Param FRAM address.
     uint32_t Pi;
+    // Data FRAM address.
+    uint32_t Di;
 
     // pick up where we left off
     FRAM_read(rbi->write_ptr_addr, &(rbi->write_ptr), 1);
@@ -308,7 +311,7 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
     } // if block full
 
     // get data start address
-    Ai = INDEX_TO_FRAM_DATA_ADDR(rbi->write_ptr % RB_NUM_ITEMS, rbi->meter_id);
+    Di = INDEX_TO_FRAM_DATA_ADDR(rbi->write_ptr % RB_NUM_ITEMS, rbi->meter_id);
     // get param start address
     Pi = INDEX_TO_FRAM_PARAM_ADDR(rbi->write_ptr % RB_NUM_ITEMS, rbi->meter_id);
 
@@ -344,11 +347,11 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
         rbi->temp_data |= LOWER4BIT(data);
 
         // !!!
-        // FRAM[Ai + rbi->inner_i] = data
-        FRAM_write(Ai + rbi->inner_i, &(rbi->temp_data), 1);
+        // FRAM[Di + rbi->inner_i] = data
+        FRAM_write(Di + rbi->inner_i, &(rbi->temp_data), 1);
 
         // store current write index
-        // FRAM[Pi + ADDR_WRITE_PTR] = f'w={Ai}+{rbi->inner_i}'
+        // FRAM[Pi + ADDR_WRITE_PTR] = f'w={Di}+{rbi->inner_i}'
         FRAM_write(Pi + RB_INNER_PTR, &(rbi->inner_i), 1);
 
         rbi->inner_i++;
@@ -360,74 +363,59 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
 
     // debug
     // NOTE: xc8 printf nem tud 2 szamot egymas melle kiirni, okk
-    /* printf("%d+%d", Ai, rbi->inner_i); */
+    /* printf("%d+%d", Di, rbi->inner_i); */
     // printf("idx: ");
-    // printf("%d+", Ai);
+    // printf("%d+", Di);
     // printf("%d ", rbi->inner_i);
     // printf("data: %d\n", data);
 }
 
-uint8_t FRAM_get_data(uint8_t *buf, ring_buf_item_t *rb)
+uint8_t FRAM_get_data(uint8_t *buf, ring_buf_item_t *rbi)
 {
+    // Param FRAM address.
+    uint32_t Pi;
+    // Data FRAM address.
+    uint32_t Di;
     uint8_t temp_index;
+    uint8_t length;
 
     // TODO: be kell varni hogy a kikuldes sikeres legyen, addig nem novelodhet a send_ptr!
-    // TODO: vagy utolag noveltetni egy masik fgv-el kuldes utan
-    // TODO: emiatt lora es fram modulok cuccai osszefolynak
 
-    // pick up writing where we left off
-    FRAM_read((uint32_t)RB_ADDR_IN1_WR_I, &rb->write_ptr, 1);
-    FRAM_read((uint32_t)RB_ADDR_IN1_RD_I, &rb->send_ptr, 1);
+    // pick up where we left off
+    FRAM_read(rbi->write_ptr_addr, &(rbi->write_ptr), 1);
+    FRAM_read(rbi->send_ptr_addr, &(rbi->send_ptr), 1);
 
     // temp (send) index points to where next send can happen
-    temp_index = (rb->send_ptr + 1) % RB_SIZE;
+    temp_index = (rbi->send_ptr + 1) % RB_NUM_ITEMS;
 
     // condition to check if there is something to send
-    if (temp_index != rb->write_ptr)
-    // if ((rb->send_ptr + 1) % RB_SIZE != rb->write_ptr)
+    if (temp_index != rbi->write_ptr)
     {
-        // send pointer points to where next send will happen
-        // NOTE: this would cause troubles, replaced with temp_index
-        // rb->send_ptr++;
-        // rb->send_ptr %= RB_SIZE;
-
         // !!!
         // read how many bytes are written into the block
-        Pi = INDEX_TO_FRAM_PARAM_ADDR(temp_index);
+        Pi = INDEX_TO_FRAM_PARAM_ADDR(temp_index, rbi->meter_id);
         // Pi = INDEX_TO_FRAM_PARAM_ADDR(rbi.send_ptr);
-        tmp = 0;
-        FRAM_read(Pi + RB_INNER_PTR, &tmp, 1);
-        // +1 to convert index --> number of elements
-        tmp += 1;
+        length = 0;
+        FRAM_read(Pi + RB_INNER_PTR, &length, 1);
+        // +1 to convert 'index' to 'number of elements'
+        length += 1;
 
         // read T0
         FRAM_read(Pi + RB_T0_YR, buf, 6);
 
         // read measurement data
-        Ai = INDEX_TO_FRAM_DATA_ADDR(temp_index);
-        // Ai = INDEX_TO_FRAM_DATA_ADDR(rbi.send_ptr);
+        Di = INDEX_TO_FRAM_DATA_ADDR(temp_index, rbi->meter_id);
 
         // buf pointer is incremented with size(T0)
         buf += 6;
 
         // NOTE: possible index out of bounds error here
-        FRAM_read(Ai, buf, tmp);
+        FRAM_read(Di, buf, length);
 
-        // NOTE: moved to send_meter_reading()
-        // debug
-        // proper_print_u8("Sending RB[%d]\n", &(rb->send_ptr), 1);
-        // !!!
-        // TODO: move this elsewhere
-        // NOTE: assuming send is always successful, which is DUMB
-        // FRAM_write((uint32_t)RB_ADDR_IN1_RD_I, &rb->send_ptr, 1);
-
-        // ...
-
-        return tmp + 6;
+        return length + 6;
     }
     else
     {
-        // proper_print("Nothing to send\n", NULL);
         return 0;
     }
 }
@@ -437,7 +425,7 @@ uint8_t FRAM_get_data(uint8_t *buf, ring_buf_item_t *rb)
 void main()
 {
     uint8_t temp;
-    uint8_t bucket[64];
+    uint8_t len;
 
     // set initial values
     temp = 0;
@@ -454,10 +442,22 @@ void main()
     for (uint8_t i = 1; i < 20; i++)
     {
         temp = i % 16;
+        // write smth
         FRAM_append_data(temp, &rb_in0);
         NOP();
-        FRAM_append_data(temp, &rb_in1);
-        NOP();
+        // read smth
+        len = FRAM_get_data(bucket, &rb_in0);
+        // mark a succesful read/send
+        if (len > 0)
+        {
+            rb_in0.send_ptr++;
+            rb_in0.send_ptr %= RB_NUM_ITEMS;
+            FRAM_write(rb_in0.send_ptr_addr, &(rb_in0.send_ptr), 1);
+            NOP();
+        }
+
+        // FRAM_append_data(temp, &rb_in1);
+        // NOP();
         // FRAM_append_data(temp, &rb_in2);
         // NOP();
         // FRAM_append_data(temp, &rb_in3);
