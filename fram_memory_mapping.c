@@ -367,6 +367,71 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
     // printf("data: %d\n", data);
 }
 
+uint8_t FRAM_get_data(uint8_t *buf, ring_buf_item_t *rb)
+{
+    uint8_t temp_index;
+
+    // TODO: be kell varni hogy a kikuldes sikeres legyen, addig nem novelodhet a send_ptr!
+    // TODO: vagy utolag noveltetni egy masik fgv-el kuldes utan
+    // TODO: emiatt lora es fram modulok cuccai osszefolynak
+
+    // pick up writing where we left off
+    FRAM_read((uint32_t)RB_ADDR_IN1_WR_I, &rb->write_ptr, 1);
+    FRAM_read((uint32_t)RB_ADDR_IN1_RD_I, &rb->send_ptr, 1);
+
+    // temp (send) index points to where next send can happen
+    temp_index = (rb->send_ptr + 1) % RB_SIZE;
+
+    // condition to check if there is something to send
+    if (temp_index != rb->write_ptr)
+    // if ((rb->send_ptr + 1) % RB_SIZE != rb->write_ptr)
+    {
+        // send pointer points to where next send will happen
+        // NOTE: this would cause troubles, replaced with temp_index
+        // rb->send_ptr++;
+        // rb->send_ptr %= RB_SIZE;
+
+        // !!!
+        // read how many bytes are written into the block
+        Pi = INDEX_TO_FRAM_PARAM_ADDR(temp_index);
+        // Pi = INDEX_TO_FRAM_PARAM_ADDR(rbi.send_ptr);
+        tmp = 0;
+        FRAM_read(Pi + RB_INNER_PTR, &tmp, 1);
+        // +1 to convert index --> number of elements
+        tmp += 1;
+
+        // read T0
+        FRAM_read(Pi + RB_T0_YR, buf, 6);
+
+        // read measurement data
+        Ai = INDEX_TO_FRAM_DATA_ADDR(temp_index);
+        // Ai = INDEX_TO_FRAM_DATA_ADDR(rbi.send_ptr);
+
+        // buf pointer is incremented with size(T0)
+        buf += 6;
+
+        // NOTE: possible index out of bounds error here
+        FRAM_read(Ai, buf, tmp);
+
+        // NOTE: moved to send_meter_reading()
+        // debug
+        // proper_print_u8("Sending RB[%d]\n", &(rb->send_ptr), 1);
+        // !!!
+        // TODO: move this elsewhere
+        // NOTE: assuming send is always successful, which is DUMB
+        // FRAM_write((uint32_t)RB_ADDR_IN1_RD_I, &rb->send_ptr, 1);
+
+        // ...
+
+        return tmp + 6;
+    }
+    else
+    {
+        // proper_print("Nothing to send\n", NULL);
+        return 0;
+    }
+}
+
 // -------------------------------------------------------------------------------------------------
 
 void main()
