@@ -9,18 +9,21 @@
 // Starting address of ring buffer data. Also the size of free space for any persistent data
 #define RB_DATA_OFFSET 10
 // #define RB_DATA_OFFSET 200
+
 // Ring buffer parameter block size (bytes). Make sure its big enough to store all parameters
 #define RB_PARAM_SIZE 7
 /**
  * Ring buffer useful data block size (bytes). This holds (RB_DATA_SIZE x 2) minutes of 
  * impulse data. 
  */
-#define RB_DATA_SIZE 2
+#define RB_DATA_SIZE 1
 // Ring buffer size (number of items in the ring)
-#define RB_SIZE 3
+#define RB_NUM_ITEMS 3
 
 // Ring buffer item size (bytes)
-#define RB_STEP_SIZE (RB_PARAM_SIZE + RB_DATA_SIZE)
+#define RB_ITEM_SIZE (RB_PARAM_SIZE + RB_DATA_SIZE)
+// ...
+#define RB_SIZE (RB_NUM_ITEMS * RB_ITEM_SIZE)
 
 // -------------------------------------------------------------------------------------------------
 
@@ -64,6 +67,20 @@ enum RB_address
 };
 
 // -------------------------------------------------------------------------------------------------
+typedef enum meters_type_t
+{
+    // NOTE: Dont offset the members, start from 0.
+
+    // TODO:
+    // // Water meter impulse connected to IN0 pin.
+    METER_IN0,
+    // Water meter impulse connected to IN1 pin.
+    METER_IN1,
+    // // Water meter impulse connected to IN2 pin.
+    METER_IN2,
+    // // Water meter impulse connected to IN3 pin.
+    METER_IN3,
+} meters_type_t;
 
 /**
  * Necessary variables to read/write the ring buffer in different contexts.
@@ -81,6 +98,9 @@ typedef struct ring_buf_item_t
     const uint32_t write_ptr_addr;
     // Ring buffer read/send index FRAM address.
     const uint32_t send_ptr_addr;
+    // ...
+    // NOTE: type is meters_type_t, but value should be IN0..IN3, and not MB_xyz.
+    const meters_type_t meter_id;
 
     // Upper + lower nibble of data stored here.
     uint8_t temp_data;
@@ -97,14 +117,14 @@ typedef struct ring_buf_item_t
  * @param [in] index
  * @retval ...
  */
-#define INDEX_TO_FRAM_DATA_ADDR(index) ((index % RB_SIZE) * RB_STEP_SIZE + RB_PARAM_SIZE + RB_DATA_OFFSET)
+#define INDEX_TO_FRAM_DATA_ADDR(i, in_x) ((i * RB_ITEM_SIZE + RB_PARAM_SIZE) + (in_x * RB_SIZE) + RB_DATA_OFFSET)
 
 /**
  * Get the starting address of i-th ring buffer parameter block
  * @param [in] index
  * @retval ...
  */
-#define INDEX_TO_FRAM_PARAM_ADDR(index) ((index % RB_SIZE) * RB_STEP_SIZE + RB_DATA_OFFSET)
+#define INDEX_TO_FRAM_PARAM_ADDR(i, in_x) ((i * RB_ITEM_SIZE) + (in_x * RB_SIZE) + RB_DATA_OFFSET)
 
 /**
  * Shrink an 8 bit variable into its lower 4 bits
@@ -141,12 +161,46 @@ void NOP()
 
 // -------------------------------------------------------------------------------------------------
 
-// Ring buffer context variable for IN1 (at the moment)
-ring_buf_item_t rbi = {
+// Ring buffer context variable for IN0.
+ring_buf_item_t rb_in0 = {
+    .write_ptr = 1,
+    .send_ptr = 0,
+    .write_ptr_addr = (uint32_t)RB_ADDR_IN0_WR_I,
+    .send_ptr_addr = (uint32_t)RB_ADDR_IN0_RD_I,
+    .meter_id = METER_IN0,
+    .temp_data = 0,
+    .inner_i = 0,
+    .nibble_select = false};
+
+// Ring buffer context variable for IN1.
+ring_buf_item_t rb_in1 = {
     .write_ptr = 1,
     .send_ptr = 0,
     .write_ptr_addr = (uint32_t)RB_ADDR_IN1_WR_I,
     .send_ptr_addr = (uint32_t)RB_ADDR_IN1_RD_I,
+    .meter_id = METER_IN1,
+    .temp_data = 0,
+    .inner_i = 0,
+    .nibble_select = false};
+
+// Ring buffer context variable for IN2.
+ring_buf_item_t rb_in2 = {
+    .write_ptr = 1,
+    .send_ptr = 0,
+    .write_ptr_addr = (uint32_t)RB_ADDR_IN2_WR_I,
+    .send_ptr_addr = (uint32_t)RB_ADDR_IN2_RD_I,
+    .meter_id = METER_IN2,
+    .temp_data = 0,
+    .inner_i = 0,
+    .nibble_select = false};
+
+// Ring buffer context variable for IN3.
+ring_buf_item_t rb_in3 = {
+    .write_ptr = 1,
+    .send_ptr = 0,
+    .write_ptr_addr = (uint32_t)RB_ADDR_IN3_WR_I,
+    .send_ptr_addr = (uint32_t)RB_ADDR_IN3_RD_I,
+    .meter_id = METER_IN3,
     .temp_data = 0,
     .inner_i = 0,
     .nibble_select = false};
@@ -190,6 +244,7 @@ void FRAM_write(uint32_t addr, uint8_t *data, uint8_t len)
 // DUMMY FUNCTION
 void getNow(uint8_t *buf)
 {
+    static uint8_t time = 0xD0;
     // get yy-mm-dd hh:mm:ss
     // buf[0] = 20;
     // buf[1] = 12;
@@ -197,12 +252,15 @@ void getNow(uint8_t *buf)
     // buf[3] = 15;
     // buf[4] = 19;
     // buf[5] = 59;
-    buf[0] = 0xDD;
-    buf[1] = 0xDD;
-    buf[2] = 0xDD;
-    buf[3] = 0xDD;
-    buf[4] = 0xDD;
-    buf[5] = 0xDD;
+    buf[0] = time;
+    buf[1] = time;
+    buf[2] = time;
+    buf[3] = time;
+    buf[4] = time;
+    buf[5] = time;
+
+    // quick thing to return changing values like
+    time++;
 
     return;
 }
@@ -222,11 +280,11 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
     if (rbi->inner_i == RB_DATA_SIZE)
     {
         // ring buffer is full condition
-        if ((rbi->write_ptr + 1) % RB_SIZE != rbi->send_ptr)
+        if ((rbi->write_ptr + 1) % RB_NUM_ITEMS != rbi->send_ptr)
         {
             // move to next ring buffer item
             rbi->write_ptr++;
-            rbi->write_ptr %= RB_SIZE;
+            rbi->write_ptr %= RB_NUM_ITEMS;
 
             // store ring buffer index
             FRAM_write(rbi->write_ptr_addr, &(rbi->write_ptr), 1);
@@ -250,9 +308,9 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
     } // if block full
 
     // get data start address
-    Ai = INDEX_TO_FRAM_DATA_ADDR(rbi->write_ptr);
+    Ai = INDEX_TO_FRAM_DATA_ADDR(rbi->write_ptr % RB_NUM_ITEMS, rbi->meter_id);
     // get param start address
-    Pi = INDEX_TO_FRAM_PARAM_ADDR(rbi->write_ptr);
+    Pi = INDEX_TO_FRAM_PARAM_ADDR(rbi->write_ptr % RB_NUM_ITEMS, rbi->meter_id);
 
     // write params into the fresh buffer (with only checking inner_i T0 gets written twice)
     if ((rbi->inner_i == 0) && rbi->nibble_select == false)
@@ -330,7 +388,15 @@ void main()
 
     for (uint8_t i = 1; i < 20; i++)
     {
-        FRAM_append_data(i, &rbi);
+        temp = i % 16;
+        FRAM_append_data(temp, &rb_in0);
+        NOP();
+        FRAM_append_data(temp, &rb_in1);
+        NOP();
+        // FRAM_append_data(temp, &rb_in2);
+        // NOP();
+        // FRAM_append_data(temp, &rb_in3);
+        // NOP();
     }
 
     /*
