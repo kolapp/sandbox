@@ -6,23 +6,35 @@
 
 // -------------------------------------------------------------------------------------------------
 
-// Starting address of ring buffer data. Also the size of free space for any persistent data
+/**
+ * Starting address of ring buffer data. 
+ *
+ * Addresses in [0, RB_DATA_OFFSET) are reserved for persistent parameters, state variables, etc. 
+ * Also this number is the size of space for those persistent data. 
+ * NOTE: Make sure to choose a size that the fields in 'global_params' enum fit here! 
+ * NOTE: Never set this to 0, the program will overwrite its state variables and behave randomly. 
+ */
 #define RB_DATA_OFFSET 10
 // #define RB_DATA_OFFSET 200
 
-// Ring buffer parameter block size (bytes). Make sure its big enough to store all parameters
+/**
+ * Ring buffer parameter block size (bytes). 
+ * Make sure its big enough to store all fields found in 'RB_address' enum.
+ */
 #define RB_PARAM_SIZE 7
+
 /**
  * Ring buffer useful data block size (bytes). This holds (RB_DATA_SIZE x 2) minutes of 
  * impulse data. 
  */
 #define RB_DATA_SIZE 1
-// Ring buffer size (number of items in the ring)
+
+// Number of items one ring buffer.
 #define RB_NUM_ITEMS 3
 
-// Ring buffer item size (bytes)
+// Size of one ring buffer item (bytes).
 #define RB_ITEM_SIZE (RB_PARAM_SIZE + RB_DATA_SIZE)
-// ...
+// Size of one ring buffer (bytes).
 #define RB_SIZE (RB_NUM_ITEMS * RB_ITEM_SIZE)
 
 // -------------------------------------------------------------------------------------------------
@@ -69,7 +81,7 @@ enum RB_address
 // -------------------------------------------------------------------------------------------------
 typedef enum meters_type_t
 {
-    // NOTE: Dont offset the members, start from 0.
+    // NOTE: Dont offset the members, start from 0. Multiple code parts depend on this.
 
     // TODO:
     // // Water meter impulse connected to IN0 pin.
@@ -268,6 +280,31 @@ void getNow(uint8_t *buf)
 
 // -------------------------------------------------------------------------------------------------
 
+/**
+ * Write data into the FRAM ring buffer.
+ * @param [in] data: Some data of 4 bits.
+ * @param [in|out] rbi: Ring buffer context variable.
+ * @retval None
+ *
+ * Example Usage:
+ * @code
+ * ring_buf_item_t rb_in0 = {
+ *     .write_ptr = 1,
+ *     .send_ptr = 0,
+ *     .write_ptr_addr = 0, // pick some fram address
+ *     .send_ptr_addr = 1, // pick some other fram address
+ *     .meter_id = 0, // pick  some number to identify a meter
+ *     .temp_data = 0,
+ *     .inner_i = 0,
+ *     .nibble_select = false};
+ * uint8_t temp;
+ * for (uint8_t i = 1; i < 20; i++)
+ * {
+ *     temp = i % 16;
+ *     FRAM_append_data(temp, &rb_in0);
+ * }
+ * @endcode
+ */
 void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
 {
     // Param FRAM address.
@@ -305,7 +342,6 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
             // TODO: return some error code
             // ...
             NOP();
-            printf("BUFFER FULL\n");
             return;
         }
     } // if block full
@@ -321,22 +357,12 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
         getNow(rbi->T0);
 
         // store T0
-        // FRAM[Pi + ADDR_T0] = f'T0={str(datetime.now())}'
+        // FRAM[Pi + ADDR_T0] = now()
         FRAM_write(Pi + RB_T0_YR, rbi->T0, 6);
-
-        // debug
-        // printf("Pi: ");
-        // printf("%d\n", Pi);
-        // printf("T0: ");
-        // printf("%d ", rb_temp.T0[0]);
-        // printf("%d ", rb_temp.T0[1]);
-        // printf("%d ", rb_temp.T0[2]);
-        // printf("%d ", rb_temp.T0[3]);
-        // printf("%d ", rb_temp.T0[4]);
-        // printf("%d\n", rb_temp.T0[5]);
     }
 
-    // write in FRAM when 2 x 4 bit of data is ready
+    // write in upper/lower nibble of temp_data in an alternating manner
+    // store in FRAM when 2 x 4 bit of data is ready
     // NOTE: 4 bits of data might get lost on power loss, rbi->inner_i is not persistent
     if (rbi->nibble_select == false)
     {
@@ -347,11 +373,9 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
         rbi->temp_data |= LOWER4BIT(data);
 
         // !!!
-        // FRAM[Di + rbi->inner_i] = data
         FRAM_write(Di + rbi->inner_i, &(rbi->temp_data), 1);
 
         // store current write index
-        // FRAM[Pi + ADDR_WRITE_PTR] = f'w={Di}+{rbi->inner_i}'
         FRAM_write(Pi + RB_INNER_PTR, &(rbi->inner_i), 1);
 
         rbi->inner_i++;
@@ -360,16 +384,31 @@ void FRAM_append_data(uint8_t data, ring_buf_item_t *rbi)
         rbi->temp_data = 0;
     }
     rbi->nibble_select = !(rbi->nibble_select);
-
-    // debug
-    // NOTE: xc8 printf nem tud 2 szamot egymas melle kiirni, okk
-    /* printf("%d+%d", Di, rbi->inner_i); */
-    // printf("idx: ");
-    // printf("%d+", Di);
-    // printf("%d ", rbi->inner_i);
-    // printf("data: %d\n", data);
 }
 
+/**
+ * Read ring buffer data from FRAM. Contains a timestamp and impulse counts.
+ * See the README for more info, its easier to understand visually.
+ * @param [out] buf - Data is written here.
+ * @param [in|out] rbi: Ring buffer context variable.
+ * @retval Number of bytes that was read, 0 if there is nothing.
+ *
+ * Example Usage:
+ * @code
+ * ring_buf_item_t rb_in0 = {
+ *     .write_ptr = 1,
+ *     .send_ptr = 0,
+ *     .write_ptr_addr = 0, // pick some fram address
+ *     .send_ptr_addr = 1, // pick some other fram address
+ *     .meter_id = 0, // pick  some number to identify a meter
+ *     .temp_data = 0,
+ *     .inner_i = 0,
+ *     .nibble_select = false};
+ * uint8_t len;
+ * uint8_t bucket[64];
+ * len = FRAM_get_data(bucket, &rb_in0);
+ * @endcode
+ */
 uint8_t FRAM_get_data(uint8_t *buf, ring_buf_item_t *rbi)
 {
     // Param FRAM address.
