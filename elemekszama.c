@@ -13,15 +13,34 @@ uint8_t get_number_of_items(uint8_t w, uint8_t r)
 {
     uint8_t x;
 
-    // by Atilla, helyesen mukodik
-    if (r > w)
+    // invalid state
+    if (w == r)
     {
-        x = RB_SIZE - 1 - (r - w);
+        return 255;
     }
-    else
-    {
-        x = (w - r) - 1;
-    }
+
+    // read/write ptr-t elforgatja ugy, hogy r==0 legyen, onnantol nincs specialis eset
+    // helyesen mukodik
+    w += (RB_SIZE - r);
+    return w % RB_SIZE - 1;
+
+    // same thing with extra steps
+    // w += (RB_SIZE - r);
+    // w %= RB_SIZE;
+    // // r==0 always
+    // r += (RB_SIZE - r);
+    // r %= RB_SIZE;
+    // return (w - r) - 1;
+
+    // by Attila, helyesen mukodik
+    // if (r > w)
+    // {
+    //     x = RB_SIZE - 1 - (r - w);
+    // }
+    // else
+    // {
+    //     x = (w - r) - 1;
+    // }
 
     // ezekre hibas, minden masra jo
     // w0, r0 ==> 255
@@ -60,14 +79,6 @@ uint8_t get_number_of_items(uint8_t w, uint8_t r)
 
     // valami kaka ebben
     // x = ((w - r) % RB_SIZE - 1) % RB_SIZE;
-
-    // invalid state
-    if (w == r)
-    {
-        return 255;
-    }
-
-    return x;
 }
 
 void main()
