@@ -20,7 +20,7 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define MAX_SOUPS_SERVED 4
+#define MAX_SOUPS_SERVED 6
 // number of cases
 #define NUMBER_OF_GUESTS 5
 // [0, 100]
@@ -31,11 +31,11 @@
 // This should have exactly <NUMBER_OF_GUESTS> members.
 typedef enum Guests
 {
-    Zero,
-    One,
-    Two,
-    Three,
-    Four,
+    GUEST_0,
+    GUEST_1,
+    GUEST_2,
+    GUEST_3,
+    GUEST_4,
 } guests_t;
 
 typedef enum
@@ -66,13 +66,13 @@ soup_status_t get_soup(guests_t guest)
     // some guests always gets soup, some dont
     switch (guest)
     {
-    case Zero:
-    case Four:
+    case GUEST_0:
+    case GUEST_4:
         return YES;
 
-    case One:
-    case Two:
-    case Three:
+    case GUEST_1:
+    case GUEST_2:
+    case GUEST_3:
         return NOPE;
 
     default:
@@ -104,8 +104,9 @@ bool take_turns(void)
 
     /**
      * What happens here:
-     *  + loop over the guests with each function call
-     *  + the function might increment by more than 1 by itself
+     *  + loop over the guests enum
+     *  + the loop increments with each function call, sometimes by more than 1
+     *
      *  + count how many guests eat soup
      *  + number of soups is limited, start over if soup limit is reached
      */
@@ -145,6 +146,9 @@ bool take_turns(void)
         if (turn >= NUMBER_OF_GUESTS)
         {
             turn = 0;
+
+            // whatever number of soups got served until this point,
+            // starting from guest 0 means a fresh start
             soups_served = 0;
 
             // give guests a 2nd chance, if nobody ate soup
