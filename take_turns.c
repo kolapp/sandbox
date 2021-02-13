@@ -20,7 +20,7 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define MAX_SOUPS_SERVED 6
+#define MAX_SOUPS_SERVED 4
 // number of cases
 #define NUMBER_OF_GUESTS 5
 // [0, 100]
@@ -46,19 +46,6 @@ typedef enum
 
 // -------------------------------------------------------------------------------------------------
 
-// does the guest get soup?
-soup_status_t soup_status;
-// who comes next?
-guests_t turn = 0;
-// how many guests GOT served soup?
-uint8_t soups_served = 0;
-// its possible to ask twice for soup, if nobody else got soup (special case)
-uint8_t repeta;
-
-// guests_t guest = 0;
-
-// -------------------------------------------------------------------------------------------------
-
 soup_status_t get_soup(guests_t guest)
 {
     printf("#%d asks for soup.\n", guest);
@@ -67,10 +54,10 @@ soup_status_t get_soup(guests_t guest)
     switch (guest)
     {
     case GUEST_0:
+    case GUEST_1:
     case GUEST_4:
         return YES;
 
-    case GUEST_1:
     case GUEST_2:
     case GUEST_3:
         return NOPE;
@@ -100,6 +87,15 @@ void eat_soup(guests_t guest)
 
 bool take_turns(void)
 {
+    // does the guest get soup?
+    static soup_status_t soup_status;
+    // who comes next?
+    static guests_t turn = 0;
+    // how many guests GOT served soup?
+    static uint8_t soups_served = 0;
+    // its possible to ask twice for soup, if nobody else got soup (special case)
+    static uint8_t repeta;
+    // did the guest eat soup?
     bool is_successful = false;
 
     /**
