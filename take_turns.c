@@ -63,27 +63,21 @@ soup_status_t get_soup(guests_t guest)
 {
     printf("#%d asks for soup.\n", guest);
 
-    // some guests always gets soup
+    // some guests always gets soup, some dont
     switch (guest)
     {
     case Zero:
-    case One:
-        return YES;
-        // return NOPE;
-        break;
-
-    case Two:
-    case Three:
-        // return YES;
-        return NOPE;
-        break;
-
     case Four:
         return YES;
-        // return NOPE;
+
+    case One:
+    case Two:
+    case Three:
+        return NOPE;
 
     default:
-        break;
+        printf("What the hell? Unknown guest: %d\n", guest);
+        return NOPE;
     }
 
     /*
@@ -106,58 +100,62 @@ void eat_soup(guests_t guest)
 
 bool take_turns(void)
 {
-    // all guests asked for soup
-    // dead code?
-    // if (turn >= NUMBER_OF_GUESTS)
-    // {
-    //     turn = 0;
-    //     soups_served = 0;
+    bool is_successful = false;
 
-    //     printf("All %d guests asked for soup. Time to eat again.\n", NUMBER_OF_GUESTS);
-    // }
+    /**
+     * What happens here:
+     *  + loop over the guests with each function call
+     *  + the function might increment by more than 1 by itself
+     *  + count how many guests eat soup
+     *  + number of soups is limited, start over if soup limit is reached
+     */
 
     // ran out of soup!
+    // this happens when there are lot more guests than soups
     if (soups_served >= MAX_SOUPS_SERVED)
     {
         turn = 0;
         soups_served = 0;
 
-        printf("Served all %d of the soups, come back later.\n\n", MAX_SOUPS_SERVED);
+        printf("Served all %d of the soups! Starting over from zero.\n\n", MAX_SOUPS_SERVED);
     }
 
     // guest asks for soup
+    // stop looping when 1 soup is served OR reached the attempt limit
     repeta = 0;
     while (1)
     {
+        // dont loop forever
         if (repeta > 1)
         {
-            // go home now y'all
-            break;
+            return false;
         }
-
-        // BUG: turn itt lehet maxnal nagyobb
 
         soup_status = get_soup(turn);
-
         if (soup_status == YES)
         {
-            soups_served++;
             eat_soup(turn);
-            // next one comes in line ...
-            turn++;
 
-            break;
+            soups_served++;
+            is_successful = true;
         }
-        // ... whether the guest got soup or not
-        turn++;
 
+        // next one comes in line, whether the guest got soup or not
+        turn++;
         if (turn >= NUMBER_OF_GUESTS)
         {
             turn = 0;
             soups_served = 0;
 
+            // give guests a 2nd chance, if nobody ate soup
             repeta++;
             printf("Repeta time.\n");
+        }
+
+        // soup got served, we are done
+        if (is_successful)
+        {
+            return true;
         }
     } // while
 }
