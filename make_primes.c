@@ -41,8 +41,16 @@ void main()
 {
     uint8_t prime_u8;
 
-    for (uint16_t n = 0; n < 256; n++)
+    // simply make primes
+    // for (uint16_t n = 0; n < 256; n++)
+    // {
+    //     printf("%d ", get_next_prime());
+    // }
+
+    // mjake primes and shrink them into an u8
+    for (uint16_t n = 0; n < 720; n++)
     {
-        printf("%d ", get_next_prime());
+        prime_u8 = (uint8_t)get_next_prime();
+        printf("%02X\n", prime_u8);
     }
 }
