@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define RB_SIZE 6
+#define RB_SIZE 5
 
 uint8_t read_ptr = 0;
 uint8_t write_ptr = 1;
@@ -21,8 +21,8 @@ uint8_t get_number_of_items(uint8_t w, uint8_t r)
 
     // read/write ptr-t elforgatja ugy, hogy r==0 legyen, onnantol nincs specialis eset
     // helyesen mukodik
-    w += (RB_SIZE - r);
-    return w % RB_SIZE - 1;
+    x = w + (RB_SIZE - r);
+    return x % RB_SIZE - 1;
 
     // same thing with extra steps
     // w += (RB_SIZE - r);

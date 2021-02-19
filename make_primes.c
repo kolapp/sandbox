@@ -48,9 +48,11 @@ void main()
     // }
 
     // mjake primes and shrink them into an u8
-    for (uint16_t n = 0; n < 720; n++)
+    for (uint16_t n = 0; n < 30 * 8; n++)
     {
         prime_u8 = (uint8_t)get_next_prime();
-        printf("%02X\n", prime_u8);
+        if (n % 8 == 0)
+            printf("\n");
+        printf("%02X ", prime_u8);
     }
 }

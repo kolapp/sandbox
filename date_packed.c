@@ -6,6 +6,7 @@ void NOP()
     return;
 }
 
+// WOOPSIE: bitfield with more than 8 bits, is not supported in xc8
 typedef struct datetime_packed_t
 {
     // example
