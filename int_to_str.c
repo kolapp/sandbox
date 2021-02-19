@@ -56,9 +56,15 @@ void main()
     char digits[6];
     uint8_t number;
 
-    for (number = 0; number < 255; number++)
-    {
-        decimal_u8_to_str(number, digits);
-        printf("%d == '%s'\n", number, digits);
-    }
+    char sentence[32];
+    const char *whatever = "damn you ";
+
+    // ---
+
+    sentence[0] = '\0';
+
+    decimal_u8_to_str(123, digits);
+    strcat(sentence, whatever);
+    strcat(sentence, digits);
+    printf("'%s'", sentence);
 }
