@@ -19,6 +19,29 @@ bool is_prime(uint16_t number)
     }
 }
 
+bool is_prime_faster(uint16_t number)
+{
+    uint16_t c;
+
+    if (number <= 1)
+    {
+        return false;
+    }
+    else if ((number % 2 == 0) && (number > 2))
+    {
+        return false;
+    }
+
+    for (int c = 3; c < number / 2; c += 2)
+    {
+        if (number % c == 0)
+            return false;
+    }
+    return true;
+
+    // https://stackoverflow.com/questions/5281779/c-how-to-test-easily-if-it-is-prime-number
+}
+
 uint16_t get_next_prime()
 {
     static uint16_t number = 2;
