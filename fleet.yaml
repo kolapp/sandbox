@@ -1,0 +1,22 @@
+---
+S002121:
+  deveui: a715c000000deb01
+  appeui: 07aaf1ee7a715c00
+  appkey: verysecretkeynobodyshouldknowrly
+  moteeui: S002112
+  modbus_channels: 0
+  impulse_inputs: 1
+  impulse_storage_size: 4
+S001234:
+  deveui: a715c000000deb02
+  appeui: 07aaf1ee7a715c00
+  appkey: verysecretkeynobodyshouldknowrly
+# S00XXXX:
+#   deveui: a715c000000deb03
+#   appeui: 07aaf1ee7a715c00
+#   appkey: verysecretkeynobodyshouldknowrly
+
+# S00XXXX:
+#   deveui: a715c000000deb04
+#   appeui: 07aaf1ee7a715c00
+#   appkey: verysecretkeynobodyshouldknowrly
