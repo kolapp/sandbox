@@ -1,9 +1,18 @@
+# import random
+
+# random meter readings
+# v = [random.randint(0, 100) for _ in range(2)]
+# dummy_readings = {
+#     "a": max(v),
+#     "b": min(v),  # b < a
+# }
+
 
 def reading(meter):
     # dict of dummy return values for real meters
     dummy_readings = {
-        "a": 100,
-        "b": 0,
+        "a": 200,
+        "b": 100,
     }
 
     result = 0
@@ -16,6 +25,7 @@ def reading(meter):
             result += tmp
             # just for show
             # print(f'{m["weight"]:+}*{m["id"]}', end=" ")
+        # print()
 
     # meter is real
     else:
@@ -34,6 +44,8 @@ if __name__ == "__main__":
     q = 1 - p
 
     # simplified table of metering devices
+    # logical relations look like this:
+    # https://excalidraw.com/#json=5405931659591680,pN7XRE2m0T4fJavnTANTxw
     meters = {
         "a": {
             "id": "a",
