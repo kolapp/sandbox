@@ -2,9 +2,8 @@
 def reading(meter):
     # dict of dummy return values for real meters
     dummy_readings = {
-        "b": 100,
-        "c": 80,
-        "d": 5,
+        "a": 100,
+        "b": 0,
     }
 
     result = 0
@@ -16,7 +15,7 @@ def reading(meter):
             tmp = reading(meters[m["id"]]) * m["weight"]
             result += tmp
             # just for show
-            print(f'{m["weight"]:+}*{m["id"]}', end=" ")
+            # print(f'{m["weight"]:+}*{m["id"]}', end=" ")
 
     # meter is real
     else:
@@ -30,24 +29,15 @@ def reading(meter):
 
 if __name__ == "__main__":
 
+    # split consumption between two meters in a ratio
+    p = 0.6
+    q = 1 - p
+
     # simplified table of metering devices
     meters = {
         "a": {
             "id": "a",
-            "expr": [
-                {
-                    "weight": 1,
-                    "id": "b"
-                },
-                {
-                    "weight": -0.5,
-                    "id": "c"
-                },
-                {
-                    "weight": -1,
-                    "id": "d"
-                }
-            ]
+            "expr": None
         },
         "b": {
             "id": "b",
@@ -55,13 +45,34 @@ if __name__ == "__main__":
         },
         "c": {
             "id": "c",
-            "expr": None
+            "expr": [
+                {"weight": p, "id": "a"},
+                {"weight": -p, "id": "b"},
+            ]
         },
         "d": {
             "id": "d",
-            "expr": None
+            "expr": [
+                {"weight": q, "id": "a"},
+                {"weight": -q, "id": "b"},
+            ]
+        },
+        "e": {
+            "id": "e",
+            "expr": [
+                {"weight": 0.5, "id": "d"},
+            ]
+
+        },
+        "f": {
+            "id": "f",
+            "expr": [
+                {"weight": 0.5, "id": "d"},
+            ]
         },
     }
 
-    result = reading(meters["a"])
+    for m in meters:
+        result = reading(meters[m])
+        print(f"{m} = {result}")
     pass
